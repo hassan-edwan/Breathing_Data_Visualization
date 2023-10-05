@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breathing D3.js Line Graph</title>
+    <!-- Add any additional head content here, such as CSS or scripts -->
+</head>
+<body>
+    <div class="controls">
+        <button id="playButton">Pause/Play</button>
+        <button id="reverseForwardButton">Reverse/Forward</button>
+        <button id="slowDownButton">Slow Down</button>
+        <button id="speedUpButton">Speed Up</button>
+    </div>
+    <script>
+        // Initialize variables
+        let path_x = 0;
+        let interval;
+        let direction = 1;
+        let rate = 40;
+        let play_tracker = 1;
+        const interval_update = new Event('interval_update');
+
+        // Function to update the interval
+        function updateInterval(speed){
+            clearInterval(interval);
+            interval = setInterval(function () {
+                path_x += direction;
+                if (path_x < 0) {
+                    path_x = 0;
+                }
+                console.log("x:", path_x);
+                document.dispatchEvent(new Event('interval_update'));
+            }, speed);
+        }
+
+        // Event listener for the play/pause button
+        document.getElementById("playButton").addEventListener("click", function(){
+            if (play_tracker == 1){
+                updateInterval(rate);
+            }else{
+                clearInterval(interval);
+                interval = null;
+            }
+            play_tracker *= -1;
+        });
+
+        // Event listener for the "Reverse/Forward" button (renamed ID)
+        document.getElementById("reverseForwardButton").addEventListener("click", function () {
+            direction *= -1;
+        });
+
+        // Event listener for the "Slow Down" button
+        document.getElementById("slowDownButton").addEventListener("click", function () {
+            if (rate < 70){
+                rate += 10;
+            }
+            if (play_tracker == -1){
+                updateInterval(rate);
+            }
+        });
+
+        // Event listener for the "Speed Up" button
+        document.getElementById("speedUpButton").addEventListener("click", function () {
+            if (rate > 0){
+                rate -= 10;
+            }
+            if (play_tracker == -1){
+                updateInterval(rate);
+            }            
+        });
+    </script>
+    <div id="container"></div>
+
+    <script type="module">
+        import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+        // Declare the Variables
+        // chart dimensions and margins.
+        const width = 940;
+        const height = 400;
+        const margin = { top: 20, right: 30, bottom: 30, left: 465 };
+        // initial lower_bound and upper_bound for the x-axis
+        var lower_bound = 0;
+        var upper_bound = 200;
+
+        const x = d3.scaleLinear()
+            .domain([lower_bound, upper_bound])
+            .range([margin.left, width - margin.right]);
+
+        const y = d3.scaleLinear()
+            .domain([300000000, 350000000])
+            .range([height - margin.bottom, margin.top]);
+
+        const svg = d3.create("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        svg.append("g")
+            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(x))
+            .classed("x-axis", true); // Add a class so that it can be selected and updated
+
+        svg.append("g")
+            .attr("transform", `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y))
+            .classed("y-axis", true); 
+
+        // Load the CSV data and use it directly
+        d3.csv("Breathing_Data_Sample.csv").then(function (data) {
+            // define the mean breathing force
+            const meanBreathingForce = d3.mean(data, d => d.breathing_force);
+            
+            // Append the path using the loaded data
+            data.forEach(function (d) {
+                d.breathing_force = +d.breathing_force; // Convert to a number if it's not already
+                d.index = +d.index;
+            });
+            // create the sliced data
+            let updatedData = data.slice(0, 0);
+            // append the path
+            var path = svg.append("path")
+                .attr("fill", "none")
+                .attr("stroke", "steelblue")
+                .attr("stroke-width", 1.5);
+
+            // create the update function
+            function updateChart() {                
+                // Update the x-axis domain with the new upper_bound
+                x.domain([lower_bound, upper_bound]);
+
+                // Update the x-axis
+                svg.select(".x-axis")
+                    .call(d3.axisBottom(x));
+
+                // Update the chart path
+                path.attr("d", d3.line()
+                    .x((d, i) => x(d.index))
+                    .y(d => y(d.breathing_force))
+                (updatedData));
+            }
+            
+            // Initial chart rendering
+            updateChart();
+            const container = document.getElementById("container");
+            container.appendChild(svg.node());
+
+            // find the start of a breathing pattern and record it until it stops
+            function checkForBreath(dataPoint) {
+                const deviationThreshold = 0.05; // Set your deviation threshold
+                const upper_deviation = Math.abs(dataPoint.breathing_force - meanBreathingForce);
+                if (upper_deviation > deviationThreshold) {
+                    // Trigger the "cough" event here
+                    console.log("Cough event detected!");
+                    console.log();
+                }
+            }
+            // making the play buttons update the graph
+            document.addEventListener("interval_update", function () {
+                    if (path_x >= 200) {
+                        updatedData = data.slice(path_x - 200, path_x);
+                    } else {
+                        updatedData = data.slice(0, path_x);
+                    }
+                    if (path_x >= 200) {
+                        upper_bound = path_x;
+                    } else {
+                        upper_bound = 200;
+                    }
+                    if (upper_bound >= 200) {
+                        lower_bound = upper_bound - 200;
+                    } else {
+                        lower_bound = 0;
+                    }
+                    updateChart();      
+            });
+        });
+    </script>
+</body>
+</html>
