@@ -21,9 +21,9 @@
             margin-bottom: 20px;
         }
         .controls button {
-            margin: 0 10px;
-            padding: 10px 20px;
-            font-size: 16px;
+            margin: 0 5px;
+            padding: 5px 10px;
+            font-size: 14px;
             background-color: #007bff;
             color: white;
             border: none;
@@ -33,10 +33,11 @@
         }
         .controls button:hover {
             background-color: #0056b3;
-        }
+        }        
         #container {
             display: flex;
             justify-content: center;
+            margin-top: 20px;
         }
         svg {
             background-color: white;
@@ -123,7 +124,7 @@
         // chart dimensions and margins.
         const width = 940;
         const height = 400;
-        const margin = { top: 20, right: 30, bottom: 30, left: 465 };
+        const margin = { top: 40, right: 30, bottom: 60, left: 100 };
         // initial lower_bound and upper_bound for the x-axis
         var lower_bound = 0;
         var upper_bound = 200;
@@ -149,6 +150,27 @@
             .attr("transform", `translate(${margin.left},0)`)
             .call(d3.axisLeft(y))
             .classed("y-axis", true); 
+
+        // Add the label for x-axis
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", height - margin.bottom / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px")
+            .style("font-weight", "bold")
+            .style("fill", "black")
+            .text("Time in 15ths of a second");
+
+        // Add the label for y-axis
+        svg.append("text")
+            .attr("x", -height / 2)
+            .attr("y", margin.left / 4)
+            .attr("text-anchor", "middle")
+            .attr("transform", "rotate(-90)")
+            .style("font-size", "14px")
+            .style("font-weight", "bold")
+            .style("fill", "black")
+            .text("Breathing Force");
 
         // Add the label for color legend
         const legend = svg.append("text")
